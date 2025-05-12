@@ -227,7 +227,7 @@
 
       sendBtn.disabled = true;
       try {
-        const res = await fetch('http://localhost:4000/upload/app', {
+        const res = await fetch('https://pvz-doc.onrender.com/upload/app', {
           method: 'POST',
           body: formData
         });
@@ -276,7 +276,7 @@
       }
       sendSummaryBtn.disabled = true;
       try {
-        const res = await fetch('http://localhost:4000/send/summary', {
+        const res = await fetch('https://pvz-doc.onrender.com/send/summary', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
