@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Архив документов ПВЗ — Wireframe</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    @font-face {
+      font-family: 'Yandex Sans Text';
+      src: url('https://yastatic.net/s3/home/fonts/ys/1/text-regular.woff2') format('woff2');
+      font-weight: 400;
+      font-style: normal;
+    }
+    
+    body { 
+      background: #000000; 
+      color: #FFFFFF; 
+      font-family: 'Yandex Sans Text', 'Inter', sans-serif; 
+      margin: 0; 
+      padding: 16px;
+    }
+    .container { 
+      max-width: 400px; 
+      margin: 20px auto; 
+      background: #1A1A1A; 
+      border-radius: 12px; 
+      padding: 24px; 
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5); 
+    }
+    h1 { 
+      text-align: center; 
+      margin-bottom: 24px; 
+      color: #FFCC00;
+      font-size: 22px;
+    }
+    h3 {
+      color: #FFCC00;
+      margin-top: 0;
+      font-size: 18px;
+    }
+    label { 
+      display: block; 
+      margin: 16px 0 8px; 
+      color: #C4C4C4;
+      font-size: 14px;
+    }
+    input, select, button, textarea {
+      width: 100%; 
+      margin-bottom: 16px; 
+      padding: 12px; 
+      border-radius: 8px; 
+      border: none;
+      font-size: 1rem; 
+      background: #000000; 
+      color: #FFFFFF;
+      box-sizing: border-box;
+    }
+    input::placeholder {
+      color: #C4C4C4;
+    }
+    button { 
+      background: #FFCC00; 
+      color: #000000; 
+      cursor: pointer; 
+      font-weight: bold; 
+      padding: 14px;
+      font-size: 16px;
+      transition: opacity 0.2s;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    button:disabled { 
+      background: #333; 
+      color: #666; 
+      cursor: not-allowed;
+      opacity: 1;
+    }
+    .preview { 
+      margin: 16px 0; 
+      text-align: center; 
+      background: #000000;
+      border-radius: 8px;
+      padding: 12px;
+    }
+    .preview img {
+      max-width: 100%;
+      border-radius: 4px;
+    }
+    .history, .summary { 
+      background: #000000; 
+      border-radius: 8px; 
+      padding: 16px; 
+      margin-top: 24px; 
+    }
+    .history ul {
+      padding-left: 20px;
+      margin: 0;
+    }
+    .history li {
+      margin-bottom: 8px;
+      color: #C4C4C4;
+    }
+    .history li b {
+      color: #FFFFFF;
+    }
+    .summary div {
+      margin: 12px 0;
+      color: #C4C4C4;
+    }
+    .summary b {
+      color: #FFFFFF;
+    }
+    .toast { 
+      position: fixed; 
+      left: 50%; 
+      bottom: 32px; 
+      transform: translateX(-50%); 
+      background: #FFCC00; 
+      color: #000000; 
+      padding: 12px 24px; 
+      border-radius: 8px; 
+      font-weight: bold; 
+      display: none; 
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    .toast.error { 
+      background: #FF3333; 
+      color: #FFFFFF;
+    }
+  </style>
+</head>
+<body>
+  <!-- Вся HTML-разметка остается без изменений -->
+  <div class="container">
+    <h1>Архив документов ПВЗ</h1>
+    <form id="uploadForm">
+      <label>Сделать фото</label>
+      <input type="file" id="fileInput" accept="image/*" capture="environment">
+      <div class="preview" id="preview"></div>
+      <input type="text" id="signature" placeholder="Подпись">
+      <select id="docType">
+        <option value="">Тип документа</option>
+        <option value="ПРИЕМКА_ЯМ">Приемка ЯМ</option>
+        <option value="ВОЗВРАТ_ЯМ">Возврат ЯМ</option>
+        <option value="ПД">ПД</option>
+        <option value="ВД">ВД</option>
+        <option value="ВК">ВК</option>
+        <option value="GO">GO</option>
+        <option value="ИНВЕНТАРИЗАЦИЯ">Инвентаризация</option>
+        <option value="АВИТО">Авито</option>
+      </select>
+      <button type="submit" id="sendBtn" disabled>📤 Отправить</button>
+    </form>
+
+    <div class="summary">
+      <h3>Итог смены</h3>
+      <input type="text" id="fio" placeholder="ФИО ответственного (оператора)">
+      <input type="text" id="tgNick" placeholder="Telegram никнейм (например, @username)">
+      <input type="number" id="toReceive" placeholder="К приёмке">
+      <input type="number" id="received" placeholder="Принято">
+      <input type="number" id="cash" placeholder="Касса (₽)">
+      <input type="number" id="encashment" placeholder="Инкассация (₽)">
+      <div>Остаток: <b id="remainder">0 ₽</b></div>
+      <button id="sendSummaryBtn">Отправить итог смены</button>
+    </div>
+
+    <div class="history">
+      <h3>История</h3>
+      <ul id="historyList"></ul>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+  <!-- Весь JavaScript-код остается без изменений -->
+  <script>
+    // --- Preview and validation for photo form ---
+    const fileInput = document.getElementById('fileInput');
+    const preview = document.getElementById('preview');
+    const signature = document.getElementById('signature');
+    const docType = document.getElementById('docType');
+    const sendBtn = document.getElementById('sendBtn');
+    const uploadForm = document.getElementById('uploadForm');
+    const toast = document.getElementById('toast');
+    const historyList = document.getElementById('historyList');
+
+    let photoFile = null;
+    let history = [];
+
+    function showToast(msg, error) {
+      toast.textContent = msg;
+      toast.className = 'toast' + (error ? ' error' : '');
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 2000);
+    }
+
+    function updateSendBtn() {
+      sendBtn.disabled = !(photoFile && signature.value.trim() && docType.value);
+    }
+
+    fileInput.addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (file) {
+        photoFile = file;
+        const reader = new FileReader();
+        reader.onload = e => { preview.innerHTML = `<img src="${e.target.result}" style="max-width:120px;">`; };
+        reader.readAsDataURL(file);
+      } else {
+        photoFile = null;
+        preview.innerHTML = '';
+      }
+      updateSendBtn();
+    });
+
+    signature.addEventListener('input', updateSendBtn);
+    docType.addEventListener('change', updateSendBtn);
+
+    uploadForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      if (!photoFile) return showToast('📷 Добавьте фото', true);
+      if (!signature.value.trim()) return showToast('Введите подпись', true);
+      if (!docType.value) return showToast('Выберите тип документа', true);
+
+      const formData = new FormData();
+      formData.append('file', photoFile);
+      formData.append('signature', signature.value);
+      formData.append('docType', docType.value);
+
+      sendBtn.disabled = true;
+      try {
+        const res = await fetch('http://localhost:4000/upload/app', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        if (data.success) {
+          const fileName = data.fileName || photoFile.name;
+          history.unshift({ fileName, signature: signature.value, docType: docType.value });
+          if (history.length > 5) history = history.slice(0, 5);
+          renderHistory();
+          showToast('Файл успешно отправлен');
+          uploadForm.reset();
+          preview.innerHTML = '';
+          photoFile = null;
+          updateSendBtn();
+        } else {
+          showToast(data.error || 'Ошибка отправки', true);
+        }
+      } catch (err) {
+        showToast('Ошибка соединения с сервером', true);
+      }
+      sendBtn.disabled = false;
+    });
+
+    // --- Summary form ---
+    const fio = document.getElementById('fio');
+    const tgNick = document.getElementById('tgNick');
+    const toReceive = document.getElementById('toReceive');
+    const received = document.getElementById('received');
+    const cash = document.getElementById('cash');
+    const encashment = document.getElementById('encashment');
+    const remainder = document.getElementById('remainder');
+    const sendSummaryBtn = document.getElementById('sendSummaryBtn');
+
+    function updateRemainder() {
+      const c = parseInt(cash.value) || 0;
+      const e = parseInt(encashment.value) || 0;
+      remainder.textContent = (c - e) + ' ₽';
+    }
+    cash.addEventListener('input', updateRemainder);
+    encashment.addEventListener('input', updateRemainder);
+
+    sendSummaryBtn.addEventListener('click', async () => {
+      if (!toReceive.value || !received.value || !cash.value || !fio.value.trim() || !tgNick.value.trim()) {
+        showToast('Заполните все поля', true);
+        return;
+      }
+      sendSummaryBtn.disabled = true;
+      try {
+        const res = await fetch('http://localhost:4000/send/summary', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fio: fio.value,
+            tgNick: tgNick.value,
+            toReceive: toReceive.value,
+            received: received.value,
+            cash: cash.value,
+            encashment: encashment.value,
+            remainder: (parseInt(cash.value) || 0) - (parseInt(encashment.value) || 0)
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast('Отчёт успешно отправлен');
+          fio.value = tgNick.value = toReceive.value = received.value = cash.value = encashment.value = '';
+          updateRemainder();
+        } else {
+          showToast(data.error || 'Ошибка отправки отчёта', true);
+        }
+      } catch (err) {
+        showToast('Ошибка соединения с сервером', true);
+      }
+      sendSummaryBtn.disabled = false;
+    });
+
+    // --- История ---
+    function renderHistory() {
+      historyList.innerHTML = history.map(item =>
+        `<li><b>${item.fileName}</b> — ${item.signature} (${item.docType})</li>`
+      ).join('');
+    }
+    renderHistory();
+  </script>
+</body>
+</html>
